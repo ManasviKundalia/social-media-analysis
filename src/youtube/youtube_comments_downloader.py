@@ -29,17 +29,23 @@ class YouTubeCommentsDownloader:
 
     def get_videos(self, service, **kwargs):
         final_results = []
-        results = service.search().list(**kwargs).execute()
-
+        try:
+            results = service.search().list(**kwargs).execute()
+        except:
+            print(kwargs)
+            return
         i = 0
-        max_pages = 1
+        max_pages = 2
         while results and i < max_pages:
             final_results.extend(results['items'])
 
             # Check if another page exists
             if 'nextPageToken' in results:
                 kwargs['pageToken'] = results['nextPageToken']
-                results = service.search().list(**kwargs).execute()
+                try:
+                    results = service.search().list(**kwargs).execute()
+                except:
+                    break
                 i += 1
             else:
                 break
@@ -48,10 +54,12 @@ class YouTubeCommentsDownloader:
 
     def search_videos_by_keyword(self, service, **kwargs):
         results = self.get_videos(service, **kwargs)
+        if not results:
+            return
         # for item in results['items']:
         #     print('%s - %s' % (item['snippet']['title'], item['id']['videoId']))
         final_result = []
-        for item in results[2:]:
+        for item in results:
             title = item['snippet']['title']
             video_id = item['id']['videoId']
             # print(title, video_id)
@@ -62,8 +70,13 @@ class YouTubeCommentsDownloader:
 
     def get_video_comments(self,service, **kwargs):
         comments = []
-        results = service.commentThreads().list(**kwargs).execute()
+        try:
+            results = service.commentThreads().list(**kwargs).execute()
+        except:
+            print(kwargs)
+            return
         # print(results)
+
         parent_ids = []
         while results:
             for item in results['items']:
@@ -108,7 +121,22 @@ class YouTubeCommentsDownloader:
             else:
                 break
         # print(comments)
-        print(parent_ids)
+        # print(parent_ids)
+        # print(kwargs)
+        # if len(parent_ids)>0:
+        for parent_id in parent_ids:
+            results_comments = service.comments().list(part='snippet',parentId=parent_ids).execute()
+            # print("Result Comment : ", results_comments)
+            for item in results_comments['items']:
+                comment_obj['thread_id'] = parent_id
+                comment_obj['comment'] = item['snippet']['textDisplay']
+                comment_obj['author'] = item['snippet']['authorDisplayName']
+                comment_obj['authorChannelId'] = item['snippet']['authorChannelId']
+                comment_obj['videoId'] = item['snippet']['videoId']
+                comment_obj['canRate'] = item['snippet']['canRate']
+                comment_obj['viewerRating'] = item['snippet']['viewerRating']
+                comment_obj['likeCount'] = item['snippet']['likeCount']
+                comments.append(comment_obj)
         return comments
 
     def save_comments_data(self):
