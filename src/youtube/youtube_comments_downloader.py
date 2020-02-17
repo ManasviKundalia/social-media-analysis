@@ -64,6 +64,9 @@ class YouTubeCommentsDownloader:
             video_id = item['id']['videoId']
             # print(title, video_id)
             comments = self.get_video_comments(service, part='snippet', videoId=video_id, textFormat='plainText')
+            if comments is None:
+                print("Got no comments!")
+                continue
             final_result.extend([(video_id, title, comment) for comment in comments])
 
         return final_result
@@ -87,7 +90,11 @@ class YouTubeCommentsDownloader:
                 comment_obj['thread_id'] = thread_id
                 comment_obj['comment'] = topLevelComment_snippet['textDisplay']
                 comment_obj['author'] = topLevelComment_snippet['authorDisplayName']
-                comment_obj['authorChannelId'] = topLevelComment_snippet['authorChannelId']
+                try:
+                    comment_obj['authorChannelId'] = topLevelComment_snippet['authorChannelId']
+                except KeyError as k:
+                    print(k, topLevelComment_snippet)
+                    pass
                 comment_obj['videoId'] = topLevelComment_snippet['videoId']
                 comment_obj['canRate'] = topLevelComment_snippet['canRate']
                 comment_obj['viewerRating'] = topLevelComment_snippet['viewerRating']
@@ -137,6 +144,7 @@ class YouTubeCommentsDownloader:
                 comment_obj['viewerRating'] = item['snippet']['viewerRating']
                 comment_obj['likeCount'] = item['snippet']['likeCount']
                 comments.append(comment_obj)
+        # print(len(comments))
         return comments
 
     def save_comments_data(self):
